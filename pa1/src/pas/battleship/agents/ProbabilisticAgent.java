@@ -1,215 +1,256 @@
 package src.pas.battleship.agents;
 
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 
 // SYSTEM IMPORTS
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Random;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Hashtable;
-import java.util.List;
 
 // JAVA PROJECT IMPORTS
 import edu.bu.battleship.agents.Agent;
 import edu.bu.battleship.game.Game.GameView;
+import edu.bu.battleship.game.ships.Ship.ShipType;
+import edu.bu.battleship.game.EnemyBoard;
 import edu.bu.battleship.game.EnemyBoard.Outcome;
 import edu.bu.battleship.utils.Coordinate;
 
-
 public class ProbabilisticAgent
-    extends Agent
-{
+        extends Agent {
 
-    public ProbabilisticAgent(String name)
-    {
+    public ProbabilisticAgent(String name) {
         super(name);
         System.out.println("[INFO] ProbabilisticAgent.ProbabilisticAgent: constructed agent");
     }
 
     @Override
-    public Coordinate makeMove(final GameView game)
-    {
-        // Ramdomly pick any position before we successfully hit ones
-        Random random = new Random();
+    public Coordinate makeMove(final GameView game) {
+        // Xi = {aircraft carrier in cell i|Y }∪{battleship in cell i|Y }∪· · ·∪{patrol
+        // boat in cell i|Y }
+        EnemyBoard.Outcome[][] enemyBoard = game.getEnemyBoardView();
+        // java.util.Map<ShipType, java.lang.Integer> enemyShips =
+        // game.getEnemyShipTypeToNumRemaining();
 
-        // picks random value that is in bounds
-        int col = random.nextInt(game.getGameConstants().getNumCols());
-        int row = random.nextInt(game.getGameConstants().getNumRows());
+        // If there is no square with 'HIT', randomly choose one.
+        Integer col = game.getGameConstants().getNumCols();
+        Integer row = game.getGameConstants().getNumRows();
+        ArrayList<Coordinate> unknown_coor = new ArrayList<>();
+        Map<Coordinate, Double> probs = new HashMap<>();
+        ArrayList<Coordinate> hitss = new ArrayList<>();
+        Boolean hasHIT = false;
+        int track = -1;
+        Coordinate res = null;
 
-        //generates coordinate to fire at
-        Coordinate fire = new Coordinate (row, col);
-
-        // ensures no duplicate positions are fired upon for random shot picking
-        while(!game.getEnemyBoardView()[fire.getXCoordinate()][fire.getYCoordinate()].toString().equals("UNKNOWN")) {
-            col = random.nextInt(game.getGameConstants().getNumCols());
-            row = random.nextInt(game.getGameConstants().getNumRows());
-            fire = new Coordinate (row, col);
-        }
+        for (int i = 0; i < col; i++) {
+            for (int j = 0; j < row; j++) {
+                if (enemyBoard[i][j] != null) {
+                    EnemyBoard.Outcome outcome = enemyBoard[i][j];
+                    if (outcome == EnemyBoard.Outcome.HIT) {
+                        hasHIT = true;
+                        hitss.add(new Coordinate(i, j));
+                        track += 1;
+                        if (hitss.size() > 1){
+                            if ((hitss.get(track).getXCoordinate() - hitss.get(track-1).getXCoordinate()) > 0 && hitss.get(track).getYCoordinate() == hitss.get(track-1).getYCoordinate()){
+                                int dirs[][] = new int[][] { { -1, 0 }, { +1, 0 }};
+                                for (int dir[] : dirs) {
+                                    int new_x = hitss.get(track).getXCoordinate() + dir[0];
+                                    int new_y = hitss.get(track).getYCoordinate() + dir[1];
+                                    Coordinate c = new Coordinate(new_x, new_y);
+                                    if (game.isInBounds(c)) {
+                                        if (enemyBoard[new_x][new_y] != null) {
+                                            if (enemyBoard[new_x][new_y] == EnemyBoard.Outcome.UNKNOWN) {
+                                                Double prob = getProb(c, game);
+                                                probs.put(c, prob);
+                                            }
+                                        }
+                                    }
         
-        if(!game.getEnemyBoardView()[fire.getXCoordinate()][fire.getYCoordinate()].toString().equals("HIT")){
-             // shot to be fired
-            return fire;
-        }
+                                }
+                            }else if((hitss.get(track).getYCoordinate() - hitss.get(track-1).getYCoordinate()) > 0 && hitss.get(track).getXCoordinate() == hitss.get(track-1).getXCoordinate() ){
+                                int dirs[][] = new int[][] {{ 0, -1 }, { 0, +1 } };
+                                for (int dir[] : dirs) {
+                                    int new_x = hitss.get(track).getXCoordinate() + dir[0];
+                                    int new_y = hitss.get(track).getYCoordinate() + dir[1];
+                                    Coordinate c = new Coordinate(new_x, new_y);
+                                    if (game.isInBounds(c)) {
+                                        if (enemyBoard[new_x][new_y] != null) {
+                                            if (enemyBoard[new_x][new_y] == EnemyBoard.Outcome.UNKNOWN) {
+                                                Double prob = getProb(c, game);
+                                                probs.put(c, prob);
+                                            }
+                                        }
+                                    }
+        
+                                }
+                            }else{
+                                int dirs[][] = new int[][] { { -1, 0 }, { +1, 0 }, { 0, -1 }, { 0, +1 } };
+                                for (int dir[] : dirs) {
+                                    int new_x = i + dir[0];
+                                    int new_y = j + dir[1];
+                                    Coordinate c = new Coordinate(new_x, new_y);
+                                    if (game.isInBounds(c)) {
+                                        if (enemyBoard[new_x][new_y] != null) {
+                                            if (enemyBoard[new_x][new_y] == EnemyBoard.Outcome.UNKNOWN) {
+                                                Double prob = getProb(c, game);
+                                                probs.put(c, prob);
+                                            }
+                                        }
+                                    }
 
-        // create probability matrix for us to pick the best next shot
-        double[][] probM = this.probabilityMatrix(game);
-
-        // Visualize current probability matrix
-        ArrayList<Integer[]> hitAdj = this.visualize(game, probM); 
-        System.out.print("Coordinates Adj to hits: ");   
-        for (Integer[] x : hitAdj) {
-            System.out.print("(");
-            int z = 0;
-            for (int y : x) {
-                if (z % 2 == 0) {
-                    System.out.print(y + ", ");
-                }
-                else {
-                    System.out.print(y);
-                }
-                z +=1 ;
-            }
-            System.out.print(") ");
-        }
-        System.out.println();
-
-        // Find the next postion to shot given probability
-        Coordinate yesss = this.next(game, probM, hitAdj);
-        System.out.println("Highest probability shot: " + yesss.toString());
-
-        return yesss;
-    }
-    
-    public double[][] probabilityMatrix(final GameView game){
-        //create a matrix for each individual cordinate probability
-        double[][] probM = new double[game.getGameConstants().getNumRows()][game.getGameConstants().getNumCols()];
-
-        for(int y = 0; y < game.getGameConstants().getNumCols(); y++) {
-            for(int x = 0; x < game.getGameConstants().getNumRows(); x++) {
-                if (game.getEnemyBoardView()[x][y].toString().equals("HIT")) {
-                    // set the value of a hit coordinate to 1.0
-                    probM[x][y] = 1.0;
-
-                    // set the hitAdjacent coordinates, ensuring it is in bounds and not to overwrite any hits, misses, or sinks
-                    if (game.isInBounds(x+1, y) && probM[x+1] [y] != -1.0 && probM[x+1][y] != 1.0 && probM[x+1][y] != -2.0) {
-                        probM[x+1][y] = 0.85;
-                        //System.out.println(probMat[x+1][y]);
-                    }
-                    if (game.isInBounds(x-1, y) && probM[x-1][y] != -1.0 && probM[x-1][y] != 1.0 && probM[x-1][y] != -2.0) {
-                        probM[x-1][y] = 0.85;
-                        //System.out.println(probMat[x-1][y]);
-                    }
-                    if (game.isInBounds(x, y+1) && probM[x][y+1] != -1.0 && probM[x][y+1] != 1.0 && probM[x][y+1] != -2.0) {
-                        probM[x][y+1] = 0.85;
-                        //System.out.println(probMat[x][y+1]);
-                    }
-                    if (game.isInBounds(x, y-1) && probM[x][y-1] != -1.0 && probM[x][y-1] != 1.0 && probM[x][y-1] != -2.0) {
-                        probM[x][y-1] = 0.85;
-                        //System.out.println(probMat[x][y-1]);
-                    }
-                }
-                else if (game.getEnemyBoardView()[x][y].toString().equals("MISS")) {
-                    // set the value of a miss to -1.0
-                    probM[x][y] = -1.0;
-                }
-                else if (game.getEnemyBoardView()[x][y].toString().equals("SUNK")) {
-                    // set the value of a sink to -2.0
-                    probM[x][y] = -2.0;
-                }
-                // if the value has not been previously changed by the hitAdjacent logic then update to unknown value for that coordinate
-                else if (probM[x][y] == 0.0) {
-                    double val = 0.0;
-                    ArrayList<Integer> perm = coordPermutations(game, new Coordinate(x, y));
-
-                    for(int z = 0; z < perm.size(); z++) {
-                        if(z==0)
-                        {
-                            val += (double)perm.get(z) * (1.0 / (double)(game.getGameConstants().getNumRows() * game.getGameConstants().getNumCols()));
+                                }
+                            }
+                        }else{
+                            int dirs[][] = new int[][] { { -1, 0 }, { +1, 0 }, { 0, -1 }, { 0, +1 } };
+                            for (int dir[] : dirs) {
+                                int new_x = i + dir[0];
+                                int new_y = j + dir[1];
+                                Coordinate c = new Coordinate(new_x, new_y);
+                                if (game.isInBounds(c)) {
+                                    if (enemyBoard[new_x][new_y] != null) {
+                                        if (enemyBoard[new_x][new_y] == EnemyBoard.Outcome.UNKNOWN) {
+                                            Double prob = getProb(c, game);
+                                            probs.put(c, prob);
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        else if(z==1)
-                        {
-                            val += (double)perm.get(z) * (2.0 / (double)(game.getGameConstants().getNumRows() * game.getGameConstants().getNumCols()));
-                        }
-                        else if(z==2)
-                        {
-                            val += (double)perm.get(z) * (3.0 / (double)(game.getGameConstants().getNumRows() * game.getGameConstants().getNumCols()));
-                        }
-                        else if(z==3)
-                        {
-                            val += (double)perm.get(z) * (4.0 / (double)(game.getGameConstants().getNumRows() * game.getGameConstants().getNumCols()));
-                        }
+                    }else if (outcome == EnemyBoard.Outcome.UNKNOWN) {
+                        Coordinate cur = new Coordinate(i, j);
+                        unknown_coor.add(cur);
                     }
-                    probM[x][y] = val;
                 }
             }
         }
-        // return the completed probability matrix
-        return probM;
-    }
-
-    public Coordinate next(final GameView game, double[][] probMat, ArrayList<Integer[]> adjacents) {
-        // init the max value that has been see so far
-        double bestProb = -1.0;
-        Coordinate bestShot = new Coordinate(100, 100);
-
-        // if there are no hitAdj coords then dont do shit
-        if (adjacents.size() != 0) {
-            // will pick the proability with the highest chance of being a hit
-            for (Integer[] x : adjacents) {
-                if (probMat[x[0]][x[1]] > bestProb) {
-                    bestProb = probMat[x[0]][x[1]];
-                    bestShot = new Coordinate(x[0], x[1]);
+        if (!hasHIT && unknown_coor.size() > 0) {
+            Collections.shuffle(unknown_coor);
+            for (Coordinate c : unknown_coor) {
+                if (c.getXCoordinate() % 2 == 0) {
+                    if (c.getYCoordinate() % 2 == 1) {
+                        continue;
+                    }
+                } else {
+                    if (c.getYCoordinate() % 2 == 0) {
+                        continue;
+                    }
+                }
+                int dirs[][] = new int[][] { { -1, 0 }, { +1, 0 }, { 0, -1 }, { 0, +1 } };
+                int x = c.getXCoordinate();
+                int y = c.getYCoordinate();
+                Boolean r = true;
+                for (int dir[] : dirs) {
+                    int new_x = x + dir[0];
+                    int new_y = y + dir[1];
+                    if (game.isInBounds(new_x, new_y)) {
+                        if (enemyBoard[new_x][new_y] == null) {
+                            continue;
+                        }
+                        if (enemyBoard[new_x][new_y] == EnemyBoard.Outcome.MISS) {
+                            r = false;
+                            break;
+                        }
+                    }
+                }
+                if (r) {
+                    return c;
                 }
             }
+            return unknown_coor.get(0);
         }
-        else {
-            // pick the highest probability coordinate when no adjacents
 
+        // Set<ShipType> types = EnumSet.noneOf(ShipType.class);
+
+        Double max = Double.NEGATIVE_INFINITY;
+        for (Map.Entry<Coordinate, Double> entry : probs.entrySet()) {
+            if (entry.getValue() > max) {
+                res = entry.getKey();
+            }
         }
-        return bestShot;
+        return res;
     }
 
-    public ArrayList<Integer[]> visualize(final GameView game,  double[][] probMatrix) {
-        ArrayList<Integer[]> close = new ArrayList<>();
+    private Double getProb(Coordinate c, final GameView game) {
+        EnemyBoard.Outcome[][] enemyBoard = game.getEnemyBoardView();
+        Double totalCases = 0d;
+        Double hitCases = 0d;
 
-        // nested for loop that will go over the probabilities as they are generated from probabilityMatrix for ease of viewing (can switch out to exact prob values)
-        for(int y = 0; y < probMatrix.length; y++) {
-            for(int x = 0; x < probMatrix[0].length; x++) {
-                // a probability of 1.0 in a coordinate denotes a hit 
-                if (probMatrix[x][y] == 1.0) {
-                    //System.out.print("|  " + "HIT" + "  |");
-                    System.out.print("| " + String.format("%.3g", probMatrix[x][y]) + " |");
-                }
-                // a probability of -1.0 in a coordinate denotes a miss
-                else if (probMatrix[x][y] == -1.0) {
-                    //System.out.print("| " + "MISS " + " |");
-                    System.out.print("| " + String.format("%.3g", probMatrix[x][y]) + " |");
-                }
-                // a probability of -2.0 in a coordinate denotes a sink
-                else if (probMatrix[x][y] == -2.0) {
-                    //System.out.print("| " + "SUNK " + " |");
-                    System.out.print("| " + String.format("%.3g", probMatrix[x][y]) + " |");
-                }
-                // a probability between 0.5 and 1.0 in a coordinate denotes a hit adjacent
-                else if (probMatrix[x][y] > 0.8 && probMatrix[x][y] < 1.0) {
-                    //System.out.print("| " + "**** " + " |");
-                    System.out.print("| " + String.format("%.3g", probMatrix[x][y]) + " |");
-                    close.add(new Integer[] {x, y});
-                }
-                // otherwise we have not shot at that coordinate
-                else {
-                    //System.out.print("| " + "UNKW " + " |");
-                    System.out.print("| " + String.format("%.3g", probMatrix[x][y]) + " |");
+        for (ShipType type : ShipType.values()) {
+            java.util.Map<ShipType, java.lang.Integer> enemyShips = game.getEnemyShipTypeToNumRemaining();
+            if (enemyShips.get(type) == 0) {
+                continue;
+            }
+            int length = shipLength(type);
+            for (int direction = 0; direction < 2; direction++) {
+                for (int diff = 0; diff < length; diff++) {
+                    int start_x = c.getXCoordinate();
+                    int start_y = c.getYCoordinate();
+                    int end_x = start_x;
+                    int end_y = start_y;
+                    if (direction == 0) {
+                        start_x = start_x - diff;
+                        end_x = start_x + length - 1;
+                    } else {
+                        start_y = start_y - diff;
+                        end_y = start_y + length - 1;
+                    }
+
+                    if (game.isInBounds(start_x, start_y) && game.isInBounds(end_x, end_y)) {
+                        Boolean valid = true;
+                        Double n_HIT = 0d;
+
+                        for (int i = 0; i < length; i++) {
+                            int x = start_x;
+                            int y = start_y;
+                            if (direction == 0) {
+                                x = x + i;
+                            } else {
+                                y = y + i;
+                            }
+                            if (enemyBoard[x][y] != null) {
+                                EnemyBoard.Outcome outcome = enemyBoard[x][y];
+                                if (outcome == EnemyBoard.Outcome.MISS || outcome == EnemyBoard.Outcome.SUNK) {
+                                    valid = false;
+                                    break;
+                                } else if (outcome == EnemyBoard.Outcome.HIT) {
+                                    n_HIT += 1d;
+                                }
+                            }
+                        }
+                        if (valid) {
+                            totalCases += 1d;
+                            hitCases += 1 + (n_HIT - 1) * 2.5; // if there is more HIT in a ship, higher probability
+                        }
+                    }
                 }
             }
-            System.out.println();
         }
-        // returns the arraylist of values that are hit adjacent
-        return close;
+
+        Double res = 0d;
+        if (totalCases > 0) {
+            res = hitCases / totalCases;
+        }
+
+        return res;
+    }
+
+    private int shipLength(ShipType type) {
+        int length = 0;
+        if (type == ShipType.PATROL_BOAT) {
+            length = 2;
+        } else if (type == ShipType.SUBMARINE || type == ShipType.DESTROYER) {
+            length = 3;
+        } else if (type == ShipType.BATTLESHIP) {
+            length = 4;
+        } else if (type == ShipType.AIRCRAFT_CARRIER) {
+            length = 5;
+        }
+        return length;
     }
 
     @Override
-    public void afterGameEnds(final GameView game) {}
+    public void afterGameEnds(final GameView game) {
+    }
 
 }
