@@ -1,3 +1,9 @@
+//test code
+
+//for i in {1..500}
+//do
+//java -cp "./lib/*:." edu.bu.battleship.Main --p2Agent edu.bu.battleship.agents.MediumAgent --p1Agent src.pas.battleship.agents.ProbabilisticAgent -d MEDIUM -s >> output500.txt
+//done
 package src.pas.battleship.agents;
 
 import java.util.EnumSet;
@@ -38,7 +44,7 @@ public class ProbabilisticAgent
         Integer row = game.getGameConstants().getNumRows();
         ArrayList<Coordinate> unknown_coor = new ArrayList<>();
         Map<Coordinate, Double> probs = new HashMap<>();
-        ArrayList<Coordinate> hitss = new ArrayList<>();
+        ArrayList<Coordinate> hitss = new ArrayList<>();//keep track of all hits coordinates
         Boolean hasHIT = false;
         int track = -1;
         Coordinate res = null;
@@ -52,7 +58,8 @@ public class ProbabilisticAgent
                         hitss.add(new Coordinate(i, j));
                         track += 1;
                         if (hitss.size() > 1){
-                            if ((hitss.get(track).getXCoordinate() - hitss.get(track-1).getXCoordinate()) > 0 && hitss.get(track).getYCoordinate() == hitss.get(track-1).getYCoordinate()){
+                            //如果新的hit和前一个hit的x轴相同 我们只考虑x轴的其他
+                            if ((hitss.get(track).getXCoordinate() - hitss.get(track-1).getXCoordinate()) != 0 && hitss.get(track).getYCoordinate() == hitss.get(track-1).getYCoordinate()){
                                 int dirs[][] = new int[][] { { -1, 0 }, { +1, 0 }};
                                 for (int dir[] : dirs) {
                                     int new_x = hitss.get(track).getXCoordinate() + dir[0];
@@ -68,7 +75,7 @@ public class ProbabilisticAgent
                                     }
         
                                 }
-                            }else if((hitss.get(track).getYCoordinate() - hitss.get(track-1).getYCoordinate()) > 0 && hitss.get(track).getXCoordinate() == hitss.get(track-1).getXCoordinate() ){
+                            }else if((hitss.get(track).getYCoordinate() - hitss.get(track-1).getYCoordinate())  != 0 && hitss.get(track).getXCoordinate() == hitss.get(track-1).getXCoordinate() ){
                                 int dirs[][] = new int[][] {{ 0, -1 }, { 0, +1 } };
                                 for (int dir[] : dirs) {
                                     int new_x = hitss.get(track).getXCoordinate() + dir[0];
