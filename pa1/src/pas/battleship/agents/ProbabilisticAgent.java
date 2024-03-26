@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Collections;
 
 // SYSTEM IMPORTS
@@ -38,44 +37,67 @@ public class ProbabilisticAgent
         Integer col = game.getGameConstants().getNumCols();
         Integer row = game.getGameConstants().getNumRows();
         ArrayList<Coordinate> unknown_coor = new ArrayList<>();
+        ArrayList<Coordinate> sunk_coor = new ArrayList<>();
         Map<Coordinate, Double> probs = new HashMap<>();
         Boolean hasHIT = false;
         Coordinate res = null;
 
         for (int i = 0; i < col; i++) {
             for (int j = 0; j < row; j++) {
-                EnemyBoard.Outcome outcome = enemyBoard[i][j];
-                if (outcome != null) {
+                if (enemyBoard[i][j] != null) {
+                    EnemyBoard.Outcome outcome = enemyBoard[i][j];
                     if (outcome == EnemyBoard.Outcome.HIT) {
                         hasHIT = true;
-                        int dirs[][] = new int[][] { { -1, 0 }, { +1, 0 }, { 0, -1 }, { 0, +1 }, { -2, 0 }, { +2, 0 },
-                                { 0, -2 }, { 0, +2 }, { -3, 0 }, { +3, 0 }, { 0, -3 }, { 0, +3 }, { -4, 0 }, { +4, 0 },
-                                { 0, -4 }, { 0, +4 } };
+                        int dirs[][] = new int[][] { { -1, 0 }, { +1, 0 }, { 0, -1 }, { 0, +1 } };
                         for (int dir[] : dirs) {
                             int new_x = i + dir[0];
                             int new_y = j + dir[1];
                             Coordinate c = new Coordinate(new_x, new_y);
-                            if (game.isInBounds(new_x, new_y) && enemyBoard[new_x][new_y] == EnemyBoard.Outcome.UNKNOWN
-                                    && !probs.containsKey(c)) {
-                                Double prob = getProb(c, game);
-                                probs.put(c, prob);
+                            if (game.isInBounds(c)) {
+                                if (enemyBoard[new_x][new_y] != null) {
+                                    if (enemyBoard[new_x][new_y] == EnemyBoard.Outcome.UNKNOWN) {
+                                        Double prob = getProb(c, game);
+                                        probs.put(c, prob);
+                                    }
+                                }
                             }
+
                         }
-                        // break;
                     } else if (outcome == EnemyBoard.Outcome.UNKNOWN) {
                         Coordinate cur = new Coordinate(i, j);
-                        // Double prob = getProb(cur, game);
-                        // probs.put(cur, prob);
                         unknown_coor.add(cur);
+                    } else if (outcome == EnemyBoard.Outcome.SUNK) {
+                        Coordinate cur = new Coordinate(i, j);
+                        sunk_coor.add(cur);
+
                     }
                 }
             }
-            // if (hasHIT) {
-            // break;
-            // }
         }
-        if (!hasHIT) {
+        if (!hasHIT && unknown_coor.size() > 0) {
             Collections.shuffle(unknown_coor);
+            for (Coordinate c : unknown_coor) {
+                int dirs[][] = new int[][] { { -1, 0 }, { +1, 0 }, { 0, -1 }, { 0, +1 } };
+                int x = c.getXCoordinate();
+                int y = c.getYCoordinate();
+                Boolean r = true;
+                for (int dir[] : dirs) {
+                    int new_x = x + dir[0];
+                    int new_y = y + dir[1];
+                    if (game.isInBounds(new_x, new_y)) {
+                        if (enemyBoard[new_x][new_y] == null) {
+                            continue;
+                        }
+                        if (enemyBoard[new_x][new_y] != EnemyBoard.Outcome.UNKNOWN) {
+                            r = false;
+                            break;
+                        }
+                    }
+                }
+                if (r) {
+                    return c;
+                }
+            }
             return unknown_coor.get(0);
         }
 
@@ -127,8 +149,8 @@ public class ProbabilisticAgent
                             } else {
                                 y = y + i;
                             }
-                            EnemyBoard.Outcome outcome = enemyBoard[x][y];
-                            if (outcome != null) {
+                            if (enemyBoard[x][y] != null) {
+                                EnemyBoard.Outcome outcome = enemyBoard[x][y];
                                 if (outcome == EnemyBoard.Outcome.MISS || outcome == EnemyBoard.Outcome.SUNK) {
                                     valid = false;
                                     break;
@@ -139,7 +161,7 @@ public class ProbabilisticAgent
                         }
                         if (valid) {
                             totalCases += 1d;
-                            hitCases += n_HIT; // if there is more HIT in a ship, higher probability
+                            hitCases += 1 + (n_HIT - 1) * 2.5; // if there is more HIT in a ship, higher probability
                         }
                     }
                 }
