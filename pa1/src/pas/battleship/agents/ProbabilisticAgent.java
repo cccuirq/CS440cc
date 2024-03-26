@@ -30,8 +30,6 @@ public class ProbabilisticAgent
         // Xi = {aircraft carrier in cell i|Y }∪{battleship in cell i|Y }∪· · ·∪{patrol
         // boat in cell i|Y }
         EnemyBoard.Outcome[][] enemyBoard = game.getEnemyBoardView();
-        // java.util.Map<ShipType, java.lang.Integer> enemyShips =
-        // game.getEnemyShipTypeToNumRemaining();
 
         // If there is no square with 'HIT', randomly choose one.
         Integer col = game.getGameConstants().getNumCols();
@@ -81,26 +79,7 @@ public class ProbabilisticAgent
                         continue;
                     }
                 }
-                int dirs[][] = new int[][] { { -1, 0 }, { +1, 0 }, { 0, -1 }, { 0, +1 } };
-                int x = c.getXCoordinate();
-                int y = c.getYCoordinate();
-                Boolean r = true;
-                for (int dir[] : dirs) {
-                    int new_x = x + dir[0];
-                    int new_y = y + dir[1];
-                    if (game.isInBounds(new_x, new_y)) {
-                        if (enemyBoard[new_x][new_y] == null) {
-                            continue;
-                        }
-                        if (enemyBoard[new_x][new_y] == EnemyBoard.Outcome.MISS) {
-                            r = false;
-                            break;
-                        }
-                    }
-                }
-                if (r) {
-                    return c;
-                }
+                return c;
             }
             return unknown_coor.get(0);
         }
