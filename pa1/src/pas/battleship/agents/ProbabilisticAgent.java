@@ -37,7 +37,6 @@ public class ProbabilisticAgent
         Integer col = game.getGameConstants().getNumCols();
         Integer row = game.getGameConstants().getNumRows();
         ArrayList<Coordinate> unknown_coor = new ArrayList<>();
-        ArrayList<Coordinate> sunk_coor = new ArrayList<>();
         Map<Coordinate, Double> probs = new HashMap<>();
         Boolean hasHIT = false;
         Coordinate res = null;
@@ -66,10 +65,6 @@ public class ProbabilisticAgent
                     } else if (outcome == EnemyBoard.Outcome.UNKNOWN) {
                         Coordinate cur = new Coordinate(i, j);
                         unknown_coor.add(cur);
-                    } else if (outcome == EnemyBoard.Outcome.SUNK) {
-                        Coordinate cur = new Coordinate(i, j);
-                        sunk_coor.add(cur);
-
                     }
                 }
             }
