@@ -72,6 +72,15 @@ public class ProbabilisticAgent
         if (!hasHIT && unknown_coor.size() > 0) {
             Collections.shuffle(unknown_coor);
             for (Coordinate c : unknown_coor) {
+                if (c.getXCoordinate() % 2 == 0) {
+                    if (c.getYCoordinate() % 2 == 1) {
+                        continue;
+                    }
+                } else {
+                    if (c.getYCoordinate() % 2 == 0) {
+                        continue;
+                    }
+                }
                 int dirs[][] = new int[][] { { -1, 0 }, { +1, 0 }, { 0, -1 }, { 0, +1 } };
                 int x = c.getXCoordinate();
                 int y = c.getYCoordinate();
@@ -83,7 +92,7 @@ public class ProbabilisticAgent
                         if (enemyBoard[new_x][new_y] == null) {
                             continue;
                         }
-                        if (enemyBoard[new_x][new_y] != EnemyBoard.Outcome.UNKNOWN) {
+                        if (enemyBoard[new_x][new_y] == EnemyBoard.Outcome.MISS) {
                             r = false;
                             break;
                         }
