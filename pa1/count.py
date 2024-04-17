@@ -1,4 +1,4 @@
-file_path = '/Users/cc/CS440cc/pa1/output500.txt'
+file_path = '/Users/cc/CS440cc/pa1/output500h.txt'
 
 # Initialize counters for each player's wins
 wins_player_1 = 0
