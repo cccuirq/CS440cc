@@ -81,9 +81,30 @@ public class TetrisQAgent
                                     final Mino potentialAction)
     {
         Matrix flattenedImage = null;
+        Matrix gameMatrix = null;
         try
         {
             flattenedImage = game.getGrayscaleImage(potentialAction).flatten();
+            // get the grayscale image of the game board
+            gameMatrix = game.getGrayscaleImage(potentialAction);
+
+            // collect data
+            int unoccupied = 0;
+            int background = 0;
+            int consider = 0;
+
+            //calculation
+            for(int x = 0; x < gameMatrix.getShape().getNumRows(); x++){
+                for(int y = 0; y <gameMatrix.getShape().getNumCols(); y++){
+                    if (gameMatrix.get(x,y) == 0.0){
+                        unoccupied += 1;
+                    }else if(gameMatrix.get(x,y) == 0.5){
+                        background += 1;
+                    }else{
+                        consider += 1;
+                    }
+                }
+            }
         } catch(Exception e)
         {
             e.printStackTrace();
