@@ -49,7 +49,7 @@ public class TetrisQAgent
         // this example will create a 3-layer neural network (1 hidden layer)
         // in this example, the input to the neural network is the
         // image of the board unrolled into a giant vector
-        final int numPixelsInImage = Board.NUM_ROWS * Board.NUM_COLS;
+        final int numPixelsInImage = 11;
         final int hiddenDim = 2 * numPixelsInImage;
         final int outDim = 1;
 
@@ -83,13 +83,15 @@ public class TetrisQAgent
         Matrix flattenedImage = null;
         Matrix gameMatrix = null;
 
-        Matrix result = Matrix.zeros(1,4);
+        Matrix result = Matrix.zeros(1,11);
         // collect data
         int num_holes_inside = 0; //empty spaces that have blocks above them
         int maxHeight = 0;
         int maxHeight_aft = 0;
-        int diff_height = 0;
+        int maxHeight_bf = 0;
+        int diff = 0;
         int holes = 0;
+        int[] minoTypes = new int[]{0, 0, 0, 0, 0, 0, 0};
         Board board = game.getBoard();
         try
         {
@@ -101,6 +103,9 @@ public class TetrisQAgent
             e.printStackTrace();
             System.exit(-1);
         }
+        //mino type set up
+        minoTypes[potentialAction.getType().ordinal()] = 1;
+        
          //calculation
         for(int y = 0; y < gameMatrix.getShape().getNumCols(); y++){
             int colHeight = 0;
@@ -118,6 +123,14 @@ public class TetrisQAgent
                 }else if (found) {
                     colHoles++;
                 }
+
+                if (gameMatrix.get(y, x) == 0.5) {
+                    // sets maxHeight after
+                    if (goingto == false) {
+                        maxHeight_bf = y;
+                        goingto = true;
+                    }
+                }
                 if (gameMatrix.get(y, x) == 1.0) {
                     // sets maxHeight after
                     if (goingto == false) {
@@ -134,18 +147,21 @@ public class TetrisQAgent
                 }
             }holes += colHoles;
         }
-        int diff = maxHeight - maxHeight_aft;
-        if (diff <= 0) {
-            diff_height = 0;
+        int diff2 = maxHeight_bf - maxHeight_aft;
+        if (diff2 <= 0) {
+            diff = 0;
         }
         else {
-            diff_height = diff;
-        }   
+            diff = diff2;
+        }    
         result.set(0, 0, maxHeight);
         result.set(0, 1, holes);
         result.set(0, 2, num_holes_inside);
-        result.set(0, 3, diff_height);
-        System.out.println(result);
+        result.set(0, 3, diff);
+        for (int i = 0; i < minoTypes.length; i++) {
+            result.set(0, 4 + i, minoTypes[i]);
+        }
+        // System.out.println(result);
         return result;
     }
 
@@ -251,9 +267,37 @@ public class TetrisQAgent
     @Override
     public double getReward(final GameView game)
     {
-        // Board b = game.getBoard();
+        Board board = game.getBoard();
+        int numemptyb = 0;
+        Coordinate highest = null;
+        Boolean beginempty = false;
+        double reward = 0.0;
 
-        return game.getScoreThisTurn();
+        for (int y = 0; y < Board.NUM_COLS; y++ ) {
+            for (int x = 0; x < Board.NUM_ROWS; x++) {
+                Coordinate c = new Coordinate(x, y);
+                if (board.isInBounds(c) && board.isCoordinateOccupied(c) && !beginempty) { 
+                    // get the highest coordinate position
+                    highest = c;
+                }
+                else if (board.isInBounds(c) && !(board.isCoordinateOccupied(x, y)) && beginempty) {
+                    // number of occupied below highest
+                    numemptyb += 1;
+                }
+            }if(highest!=null){
+                beginempty = true;
+            }
+        }
+       
+        if (highest != null) {
+            double highestY = (Board.NUM_ROWS - highest.getYCoordinate());
+            System.out.println("Highest occupied Y-coord: " + highestY + ", empty spaces below: " + numemptyb);
+            //more height should minus more point
+            reward = game.getScoreThisTurn()-highestY-2*numemptyb;//reward consider height and score
+            System.out.println("Reward value: " + reward);
+        }
+        return reward;
     }
+    
 
 }
