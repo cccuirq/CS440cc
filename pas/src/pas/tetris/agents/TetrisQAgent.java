@@ -49,7 +49,7 @@ public class TetrisQAgent
         // this example will create a 3-layer neural network (1 hidden layer)
         // in this example, the input to the neural network is the
         // image of the board unrolled into a giant vector
-        final int numPixelsInImage = 11;
+        final int numPixelsInImage = 12;
         final int hiddenDim = 2 * numPixelsInImage;
         final int outDim = 1;
 
@@ -83,7 +83,8 @@ public class TetrisQAgent
         Matrix flattenedImage = null;
         Matrix gameMatrix = null;
 
-        Matrix result = Matrix.zeros(1,11);
+        Matrix result = Matrix.zeros(1,12);
+        
         // collect data
         int num_holes_inside = 0; //empty spaces that have blocks above them
         int maxHeight = 0;
@@ -91,8 +92,10 @@ public class TetrisQAgent
         int maxHeight_bf = 0;
         int diff = 0;
         int holes = 0;
+        int bumpiness = 0; // the variance between the heights of adjacent columns, higher the variance, less opportunity to cancel out lines
         int[] minoTypes = new int[]{0, 0, 0, 0, 0, 0, 0};
         Board board = game.getBoard();
+        
         try
         {
             flattenedImage = game.getGrayscaleImage(potentialAction).flatten();
@@ -107,11 +110,13 @@ public class TetrisQAgent
         minoTypes[potentialAction.getType().ordinal()] = 1;
         
          //calculation
+        int previousHeight = -1;
         for(int y = 0; y < gameMatrix.getShape().getNumCols(); y++){
             int colHeight = 0;
             boolean found = false;
             boolean goingto = false;//maximum height after I place current piece
             int colHoles = 0;
+            int currentheight = 0;
             for(int x = 0; x < gameMatrix.getShape().getNumRows(); x++ ){
                 Coordinate c = new Coordinate(x, y);
                 if (board.isInBounds(c) && board.isCoordinateOccupied(c)) {
@@ -125,7 +130,7 @@ public class TetrisQAgent
                 }
 
                 if (gameMatrix.get(y, x) == 0.5) {
-                    // sets maxHeight after
+                    // sets maxHeight before
                     if (goingto == false) {
                         maxHeight_bf = y;
                         goingto = true;
@@ -145,7 +150,18 @@ public class TetrisQAgent
                         num_holes_inside += 1;
                     }
                 }
-            }holes += colHoles;
+
+                //calculate bumpiness
+                if (gameMatrix.get(x, y) > 0) {
+                    currentheight = Board.NUM_ROWS - x;
+                    break;
+                }
+                if (previousHeight != -1) {
+                    bumpiness += Math.abs(currentheight - previousHeight);
+                }
+                previousHeight = currentheight;
+            }
+            holes += colHoles;
         }
         int diff2 = maxHeight_bf - maxHeight_aft;
         if (diff2 <= 0) {
@@ -161,6 +177,7 @@ public class TetrisQAgent
         for (int i = 0; i < minoTypes.length; i++) {
             result.set(0, 4 + i, minoTypes[i]);
         }
+        result.set(0, 11, bumpiness);
         // System.out.println(result);
         return result;
     }
@@ -296,7 +313,6 @@ public class TetrisQAgent
             System.out.println("Reward value: " + reward + "num empty" + numemptyb);
         }
         return reward;
-    }
-    
+    } 
 
 }
