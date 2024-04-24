@@ -291,7 +291,6 @@ public class TetrisQAgent
        
         if (highest != null) {
             double highestY = (Board.NUM_ROWS - highest.getYCoordinate());
-            System.out.println("Highest occupied Y-coord: " + highestY + ", empty spaces below: " + numemptyb);
             //more height should minus more point
             reward = game.getScoreThisTurn()-highestY-2*numemptyb;//reward consider height and score
             System.out.println("Reward value: " + reward);
