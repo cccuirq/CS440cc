@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-
+import edu.bu.tetris.utils.Coordinate;
 // JAVA PROJECT IMPORTS
 import edu.bu.tetris.agents.QAgent;
 import edu.bu.tetris.agents.TrainerAgent.GameCounter;
@@ -82,35 +82,71 @@ public class TetrisQAgent
     {
         Matrix flattenedImage = null;
         Matrix gameMatrix = null;
+
+        Matrix result = Matrix.zeros(1,4);
+        // collect data
+        int num_holes_inside = 0; //empty spaces that have blocks above them
+        int maxHeight = 0;
+        int maxHeight_aft = 0;
+        int diff_height = 0;
+        int holes = 0;
+        Board board = game.getBoard();
         try
         {
             flattenedImage = game.getGrayscaleImage(potentialAction).flatten();
             // get the grayscale image of the game board
             gameMatrix = game.getGrayscaleImage(potentialAction);
-
-            // collect data
-            int unoccupied = 0;
-            int background = 0;
-            int consider = 0;
-
-            //calculation
-            for(int x = 0; x < gameMatrix.getShape().getNumRows(); x++){
-                for(int y = 0; y <gameMatrix.getShape().getNumCols(); y++){
-                    if (gameMatrix.get(x,y) == 0.0){
-                        unoccupied += 1;
-                    }else if(gameMatrix.get(x,y) == 0.5){
-                        background += 1;
-                    }else{
-                        consider += 1;
-                    }
-                }
-            }
         } catch(Exception e)
         {
             e.printStackTrace();
             System.exit(-1);
         }
-        return flattenedImage;
+         //calculation
+        for(int y = 0; y < gameMatrix.getShape().getNumCols(); y++){
+            int colHeight = 0;
+            boolean found = false;
+            boolean goingto = false;//maximum height after I place current piece
+            int colHoles = 0;
+            for(int x = 0; x < gameMatrix.getShape().getNumRows(); x++ ){
+                Coordinate c = new Coordinate(x, y);
+                if (board.isInBounds(c) && board.isCoordinateOccupied(c)) {
+                    found = true;
+                    colHeight = Board.NUM_ROWS - x;
+                    if (maxHeight < colHeight) {
+                        maxHeight = colHeight;
+                    }
+                }else if (found) {
+                    colHoles++;
+                }
+                if (gameMatrix.get(y, x) == 1.0) {
+                    // sets maxHeight after
+                    if (goingto == false) {
+                        maxHeight_aft = y;
+                        goingto = true;
+                    }
+                }
+
+                if (gameMatrix.get(y, x) == 0.0) {
+                    // iterates numHoles when coordinate above is filled
+                    if (y > 0 && (gameMatrix.get(y-1, x) == 1.0 || gameMatrix.get(y-1, x) == 0.5)) {
+                        num_holes_inside += 1;
+                    }
+                }
+            }holes += colHoles;
+        }
+        int diff = maxHeight - maxHeight_aft;
+        if (diff <= 0) {
+            diff_height = 0;
+        }
+        else {
+            diff_height = diff;
+        }   
+        result.set(0, 0, maxHeight);
+        result.set(0, 1, holes);
+        result.set(0, 2, num_holes_inside);
+        result.set(0, 3, diff_height);
+        System.out.println(result);
+        return result;
     }
 
     /**
@@ -215,6 +251,8 @@ public class TetrisQAgent
     @Override
     public double getReward(final GameView game)
     {
+        // Board b = game.getBoard();
+
         return game.getScoreThisTurn();
     }
 
