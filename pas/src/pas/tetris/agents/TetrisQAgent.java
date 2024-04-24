@@ -213,7 +213,7 @@ public class TetrisQAgent
      * our model. Updates (i.e. gradient descent updates) will be applied per minibatch
      * (i.e. a subset of the entire dataset) rather than in a vanilla gradient descent manner
      * (i.e. all at once)...this often works better and is an active area of research.
-     *
+     
      * Each pass through the data is called an epoch, and we will perform "numUpdates" amount
      * of epochs in between the training and eval sections of each phase.
      */
@@ -290,10 +290,10 @@ public class TetrisQAgent
         }
        
         if (highest != null) {
-            double highestY = (Board.NUM_ROWS - highest.getYCoordinate());
+            double highestY = (Board.NUM_ROWS - highest.getYCoordinate());//higher the highest, smaller the highestY
             //more height should minus more point
-            reward = game.getScoreThisTurn()-highestY-2*numemptyb;//reward consider height and score
-            System.out.println("Reward value: " + reward);
+            reward = (-1.0 / highestY) - 0.5*numemptyb + game.getScoreThisTurn();;//reward consider height and score
+            System.out.println("Reward value: " + reward + "num empty" + numemptyb);
         }
         return reward;
     }
