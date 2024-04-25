@@ -4,6 +4,8 @@ package src.pas.tetris.agents;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.HashMap;
+import java.util.Map;
 
 import edu.bu.tetris.utils.Coordinate;
 // JAVA PROJECT IMPORTS
@@ -30,10 +32,12 @@ public class TetrisQAgent
     public static final double EXPLORATION_PROB = 0.05;
 
     private Random random;
+    private Map<Mino, Integer> visitCounts;
 
     public TetrisQAgent(String name) {
         super(name);
         this.random = new Random(12345); // optional to have a seed
+        this.visitCounts = new HashMap<>();
     }
 
     public Random getRandom() {
@@ -216,9 +220,22 @@ public class TetrisQAgent
      */
     @Override
     public Mino getExplorationMove(final GameView game) {
-        int randIdx = this.getRandom().nextInt(game.getFinalMinoPositions().size());
+        List<Mino> possibleMoves = game.getFinalMinoPositions();
+        Mino leastVisitedMino = null;
+        int minVisit = Integer.MAX_VALUE;
 
-        return game.getFinalMinoPositions().get(randIdx);
+        // Iterate over all possible moves and find the one with the least visits
+        for (Mino mino : possibleMoves) {
+            int visits = visitCounts.getOrDefault(mino, 0);
+            if (visits < minVisit) {
+                minVisit = visits;
+                leastVisitedMino = mino;
+            }
+        }
+        // Update the visit count for the selected Mino
+        visitCounts.put(leastVisitedMino, minVisit + 1);
+
+        return leastVisitedMino;
     }
 
     /**
