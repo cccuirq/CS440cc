@@ -221,21 +221,21 @@ public class TetrisQAgent
     @Override
     public Mino getExplorationMove(final GameView game) {
         List<Mino> possibleMoves = game.getFinalMinoPositions();
-        Mino leastVisitedMino = null;
-        int minVisit = Integer.MAX_VALUE;
+        Mino leastVisited = null;
+        int minV = Integer.MAX_VALUE;
 
         // Iterate over all possible moves and find the one with the least visits
         for (Mino mino : possibleMoves) {
             int visits = visitCounts.getOrDefault(mino, 0);
-            if (visits < minVisit) {
-                minVisit = visits;
-                leastVisitedMino = mino;
+            if (visits < minV) {
+                minV = visits;
+                leastVisited = mino;
             }
         }
         // Update the visit count for the selected Mino
-        visitCounts.put(leastVisitedMino, minVisit + 1);
+        visitCounts.put(leastVisited, minV + 1);
 
-        return leastVisitedMino;
+        return leastVisited;
     }
 
     /**
