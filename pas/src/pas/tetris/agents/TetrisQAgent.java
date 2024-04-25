@@ -318,30 +318,21 @@ public class TetrisQAgent
         }
 
         int complete = 0;
+        int almost = 0;
         for (int row = 0; row < Board.NUM_ROWS; row++) {
             boolean completeLine = true;
+            Double squares = 0d;
             for (int col = 0; col < Board.NUM_COLS; col++) {
                 Coordinate c = new Coordinate(row, col);
                 if (board.isInBounds(c) && !board.isCoordinateOccupied(c)) {
                     completeLine = false;
-                    break;
+                } else if (board.isInBounds(c) && board.isCoordinateOccupied(c)) {
+                    squares++;
                 }
             }
             if (completeLine) {
                 complete++;
-            }
-        }
-
-        int almost = 0;
-        for (int row = 0; row < Board.NUM_ROWS; row++) {
-            Double squares = 0d;
-            for (int col = 0; col < Board.NUM_COLS; col++) {
-                Coordinate c = new Coordinate(row, col);
-                if (board.isInBounds(c) && board.isCoordinateOccupied(c)) {
-                    squares++;
-                }
-            }
-            if (squares / Board.NUM_COLS >= 0.8) {
+            } else if (squares / Board.NUM_COLS >= 0.8) {
                 almost++;
             }
         }
@@ -351,7 +342,7 @@ public class TetrisQAgent
             // more height should minus more point
             reward = (-highestY) - 2 * numemptyb + 4 * almost + 10 * complete + game.getScoreThisTurn();
             ;// reward consider height and score
-            System.out.println("Reward value: " + reward + "num empty" + numemptyb);
+             // System.out.println("Reward value: " + reward + "num empty" + numemptyb);
         }
         return reward;
     }
