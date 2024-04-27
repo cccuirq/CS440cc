@@ -4,6 +4,8 @@ package src.pas.tetris.agents;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.HashMap;
+import java.util.Map;
 
 import edu.bu.tetris.utils.Coordinate;
 // JAVA PROJECT IMPORTS
@@ -30,10 +32,12 @@ public class TetrisQAgent
     public static final double EXPLORATION_PROB = 0.05;
 
     private Random random;
+    private Map<Mino, Integer> visitCounts;
 
     public TetrisQAgent(String name) {
         super(name);
         this.random = new Random(12345); // optional to have a seed
+        this.visitCounts = new HashMap<>();
     }
 
     public Random getRandom() {
@@ -198,9 +202,9 @@ public class TetrisQAgent
     @Override
     public boolean shouldExplore(final GameView game,
             final GameCounter gameCounter) {
-        long t = gameCounter.getCurrentPhaseIdx();
+        long t = gameCounter.getCurrentMoveIdx();
 
-        return this.getRandom().nextDouble() <= (1 / (1 + t));
+        return this.getRandom().nextDouble() <= (1 / (5 + t));
         // return this.getRandom().nextDouble() <= EXPLORATION_PROB;
     }
 
@@ -216,9 +220,22 @@ public class TetrisQAgent
      */
     @Override
     public Mino getExplorationMove(final GameView game) {
-        int randIdx = this.getRandom().nextInt(game.getFinalMinoPositions().size());
+        List<Mino> possibleMoves = game.getFinalMinoPositions();
+        Mino leastVisited = null;
+        int minV = Integer.MAX_VALUE;
 
-        return game.getFinalMinoPositions().get(randIdx);
+        // Iterate over all possible moves and find the one with the least visits
+        for (Mino mino : possibleMoves) {
+            int visits = visitCounts.getOrDefault(mino, 0);
+            if (visits < minV) {
+                minV = visits;
+                leastVisited = mino;
+            }
+        }
+        // Update the visit count for the selected Mino
+        visitCounts.put(leastVisited, minV + 1);
+
+        return leastVisited;
     }
 
     /**
@@ -319,20 +336,22 @@ public class TetrisQAgent
 
         int complete = 0;
         int almost = 0;
+        int total = 0;
         for (int row = 0; row < Board.NUM_ROWS; row++) {
-            boolean completeLine = true;
+            // boolean completeLine = true;
             Double squares = 0d;
             for (int col = 0; col < Board.NUM_COLS; col++) {
                 Coordinate c = new Coordinate(row, col);
                 if (board.isInBounds(c) && !board.isCoordinateOccupied(c)) {
-                    completeLine = false;
+                    // completeLine = false;
                 } else if (board.isInBounds(c) && board.isCoordinateOccupied(c)) {
                     squares++;
+                    total++;
                 }
             }
-            if (completeLine) {
+            if (squares / Board.NUM_COLS == 1.0) {
                 complete++;
-            } else if (squares / Board.NUM_COLS >= 0.8) {
+            } else if (squares / Board.NUM_COLS >= 0.5) {
                 almost++;
             }
         }
@@ -340,7 +359,7 @@ public class TetrisQAgent
         if (highest != null) {
             double highestY = (Board.NUM_ROWS - highest.getYCoordinate());// higher the highest, smaller the highestY
             // more height should minus more point
-            reward = (-highestY) - 2 * numemptyb + 4 * almost + 10 * complete + game.getScoreThisTurn();
+            reward = (5 * total / highestY) - numemptyb + 7 * almost + 10 * complete + 2 * game.getScoreThisTurn();
             ;// reward consider height and score
              // System.out.println("Reward value: " + reward + "num empty" + numemptyb);
         }
