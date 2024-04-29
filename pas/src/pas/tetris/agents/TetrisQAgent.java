@@ -117,7 +117,7 @@ public class TetrisQAgent
             int colHoles = 0;
             int currentheight = 0;
             for (int x = 0; x < gameMatrix.getShape().getNumRows(); x++) {
-                Coordinate c = new Coordinate(x, y);
+                Coordinate c = new Coordinate(y, x);
                 if (board.isInBounds(c) && board.isCoordinateOccupied(c)) {
                     found = true;
                     colHeight = Board.NUM_ROWS - x;
@@ -151,7 +151,7 @@ public class TetrisQAgent
                 }
 
                 // calculate bumpiness
-                if (gameMatrix.get(x, y) > 0) {
+                if (gameMatrix.get(y, x) > 0) {
                     currentheight = Board.NUM_ROWS - x;
                     break;
                 }
@@ -322,12 +322,12 @@ public class TetrisQAgent
         for (int y = 0; y < Board.NUM_COLS; y++) {
             beginempty = false;
             for (int x = 0; x < Board.NUM_ROWS; x++) {
-                Coordinate c = new Coordinate(x, y);
+                Coordinate c = new Coordinate(y, x);
                 if (board.isInBounds(c) && board.isCoordinateOccupied(c) && !beginempty) {
                     // get the highest coordinate position
                     highest = c;
                     beginempty = true;
-                } else if (board.isInBounds(c) && !(board.isCoordinateOccupied(x, y)) && beginempty) {
+                } else if (board.isInBounds(c) && !(board.isCoordinateOccupied(y, x)) && beginempty) {
                     // number of occupied below highest
                     numemptyb += 1;
                 }
@@ -341,7 +341,7 @@ public class TetrisQAgent
             // boolean completeLine = true;
             Double squares = 0d;
             for (int col = 0; col < Board.NUM_COLS; col++) {
-                Coordinate c = new Coordinate(row, col);
+                Coordinate c = new Coordinate(col, row);
                 if (board.isInBounds(c) && !board.isCoordinateOccupied(c)) {
                     // completeLine = false;
                 } else if (board.isInBounds(c) && board.isCoordinateOccupied(c)) {
@@ -359,7 +359,8 @@ public class TetrisQAgent
         if (highest != null) {
             double highestY = (Board.NUM_ROWS - highest.getYCoordinate());// higher the highest, smaller the highestY
             // more height should minus more point
-            reward = (5 * total / highestY) - numemptyb + 7 * almost + 10 * complete + 2 * game.getScoreThisTurn();
+            reward = -(2 * highestY) - (0.8 * numemptyb) + 4 * almost + 8 * complete
+                    + 50 * game.getScoreThisTurn();
             ;// reward consider height and score
              // System.out.println("Reward value: " + reward + "num empty" + numemptyb);
         }
